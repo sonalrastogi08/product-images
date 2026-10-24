@@ -1,8 +1,8 @@
-import { PRESETS } from './presets.js';
-import { removeBackground } from './bg-removal.js';
+import { PRESETS } from './presets.js?v=3';
+import { removeBackground } from './bg-removal.js?v=3';
 import {
   imageToCanvas, findProductBounds, compose, exportWithinLimit, checkCompliance,
-} from './compose.js';
+} from './compose.js?v=3';
 
 const $ = (sel) => document.querySelector(sel);
 

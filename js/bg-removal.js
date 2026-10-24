@@ -15,8 +15,11 @@ function markGpuBroken() {
   try { localStorage.setItem(GPU_BROKEN_KEY, '1'); } catch { /* storage unavailable */ }
 }
 
+// WebGPU is off for now: several GPUs load the model but fail to run it.
+const ENABLE_WEBGPU = false;
+
 async function hasWebGPU() {
-  if (!navigator.gpu || gpuMarkedBroken()) return false;
+  if (!ENABLE_WEBGPU || !navigator.gpu || gpuMarkedBroken()) return false;
   try {
     return !!(await navigator.gpu.requestAdapter());
   } catch {
