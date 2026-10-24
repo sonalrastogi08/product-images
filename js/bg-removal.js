@@ -24,7 +24,7 @@ async function createSegmenter(onStatus) {
     ? [{ device: 'webgpu', dtype: 'fp16' }, { device: 'webgpu', dtype: 'fp32' }, { device: 'wasm', dtype: 'fp32' }]
     : [{ device: 'wasm', dtype: 'q8' }, { device: 'wasm', dtype: 'fp32' }];
 
-  let lastError;
+  const failures = [];
   for (const opts of attempts) {
     try {
       onStatus?.(`Loading model (${opts.device}, ${opts.dtype})… first time may take a minute`);
@@ -40,10 +40,10 @@ async function createSegmenter(onStatus) {
       return { segmenter, device: opts.device, dtype: opts.dtype };
     } catch (err) {
       console.warn('Model load failed for', opts, err);
-      lastError = err;
+      failures.push(`[${opts.device}/${opts.dtype}] ${err?.message || err}`);
     }
   }
-  throw lastError;
+  throw new Error(`Model could not load. ${failures.join(' · ')}`);
 }
 
 export function loadSegmenter(onStatus) {
@@ -58,8 +58,13 @@ export function loadSegmenter(onStatus) {
 
 // Returns a canvas with the product cut out (transparent background).
 export async function removeBackground(imageUrl, onStatus) {
-  const { segmenter } = await loadSegmenter(onStatus);
-  onStatus?.('Removing background…');
+  let transformersOk = true;
+  const { segmenter, device, dtype } = await loadSegmenter(onStatus).catch(async (err) => {
+    // Distinguish "library didn't load" from "model didn't load".
+    try { await import(TRANSFORMERS_URL); } catch { transformersOk = false; }
+    throw transformersOk ? err : new Error(`AI library could not load from CDN (${err.message})`);
+  });
+  onStatus?.(`Removing background (${device}, ${dtype})…`);
   const result = await segmenter(imageUrl);
   return result.toCanvas();
 }
